@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.open.Notice">
+
+	<sql id="Where">
+		<if test="searchKeyword !=null and searchKeyword !=''">
+			<if test="searchCondition !=null and searchCondition !='' and searchCondition ==0">
+				AND (TITLE LIKE CONCAT('%',#{searchKeyword},'%') OR CONT like CONCAT('%',#{searchKeyword},'%'))
+			</if>
+			<if test="searchCondition !=null and searchCondition !='' and searchCondition ==1">
+				AND TITLE LIKE CONCAT('%',#{searchKeyword},'%')
+			</if>
+			<if test="searchCondition !=null and searchCondition !='' and searchCondition ==2">
+				AND CONT LIKE CONCAT('%',#{searchKeyword},'%')
+			</if>
+	 	</if>
+	</sql>
+	
+	<select id="selectContents" parameterType="noticeVO" resultType="noticeVO">
+		/* Board.selectContents */
+		<![CDATA[
+			 SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, ATCH_FILE_ID atchFileId
+				, F_USER_NM(RGST_ID) name
+				, DATE(STA_DATE) staDate
+				, DATE(END_DATE) endDate
+				, NOTI_YN notiYn
+				, HP hp
+				, EMAIL email
+		     FROM  T_NOTICE TB
+			 WHERE  USE_YN='Y'	
+				 AND SEQ = #{seq}
+		]]>
+	</select>
+	<select id="selectPrevContents" parameterType="noticeVO" resultType="noticeVO">
+		/* selectPrevContents.selectContents */
+		<![CDATA[
+			 SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, ATCH_FILE_ID atchFileId
+				, F_USER_NM(RGST_ID) name
+				, DATE(STA_DATE) staDate
+				, DATE(END_DATE) endDate
+				, NOTI_YN notiYn
+				, HP hp
+				, EMAIL email
+		     FROM  T_NOTICE TB
+			 WHERE  USE_YN='Y'	
+				 AND SEQ = (SELECT MAX(SEQ) FROM T_NOTICE WHERE SEQ < #{seq} AND USE_YN='Y' )
+		]]>
+	</select>
+	<select id="selectNextContents" parameterType="noticeVO" resultType="noticeVO">
+		/* selectNextContents.selectContents */
+		<![CDATA[
+			 SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, ATCH_FILE_ID atchFileId
+				, F_USER_NM(RGST_ID) name
+				, DATE(STA_DATE) staDate
+				, DATE(END_DATE) endDate
+				, NOTI_YN notiYn
+				, HP hp
+				, EMAIL email
+		     FROM  T_NOTICE TB
+			 WHERE  USE_YN='Y'	
+				 AND SEQ = (SELECT MIN(SEQ) FROM T_NOTICE WHERE SEQ > #{seq} AND USE_YN='Y')
+		]]>
+	</select>
+	
+	
+	<select id="selectList" parameterType="cmmnDefaultVO" resultType="noticeVO">
+		/* Board.selectList */
+		<![CDATA[
+      	     SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, F_USER_NM(RGST_ID) name
+				, ATCH_FILE_ID atchFileId
+				, STA_DATE staDate
+				, END_DATE endDate
+				, HP hp
+				, EMAIL email
+				,CASE
+					WHEN DATE(STA_DATE) <= CURDATE() AND DATE(END_DATE) >= CURDATE() AND NOTI_YN = 'Y'
+					THEN 'Y'
+					ELSE 'N'
+				END notiYn
+				,CASE
+					WHEN DATE(RGST_DT) = CURDATE()
+					THEN 'Y'
+					ELSE 'N'
+				END newItem
+		     FROM T_NOTICE TB
+			 WHERE USE_YN='Y'	
+	      ]]>
+		     <include refid="Where"/>	 
+	     <![CDATA[ 
+	    		ORDER BY notiYn DESC, SEQ DESC
+				LIMIT  #{firstIndex} , #{recordCountPerPage}
+		]]>
+	</select>	
+
+
+	<select id="selectCount" parameterType="cmmnDefaultVO" resultType="int">
+		/* Board.selectCount */
+		<![CDATA[
+			SELECT 
+				COUNT(SEQ) cnt 
+			FROM T_NOTICE
+			WHERE USE_YN='Y' 
+		]]>
+			 <include refid="Where"/>
+	</select>
+	
+	<insert id="insertContents" parameterType="noticeVO">
+		/* Board.insertContents */
+		<![CDATA[
+			INSERT INTO T_NOTICE(
+           	  	  SEQ 
+				, TITLE 
+				, CONT
+				, RGST_ID 
+				, ATCH_FILE_ID 
+				, STA_DATE
+				, END_DATE 
+				, NOTI_YN 
+				, HP
+				, EMAIL
+			)
+			VALUES (
+				 (SELECT IFNULL(MAX(TB.SEQ)+1,1) FROM T_NOTICE TB)
+				,#{title ,jdbcType=VARCHAR}
+				,#{cont ,jdbcType=VARCHAR}
+				,#{loginSeq ,jdbcType=VARCHAR}
+				,#{atchFileId ,jdbcType=VARCHAR}
+				,#{staDate ,jdbcType=VARCHAR}
+				,#{endDate ,jdbcType=VARCHAR}
+				,#{notiYn ,jdbcType=VARCHAR}
+				,#{hp ,jdbcType=VARCHAR}
+				,#{email ,jdbcType=VARCHAR}
+			)
+		]]>
+	</insert>
+	
+	<update id="updateContents" parameterType="noticeVO">
+		/* Board.updateContents */
+		<![CDATA[
+			UPDATE T_NOTICE     
+			 SET 
+				  TITLE = #{title ,jdbcType=VARCHAR} 
+				, CONT = #{cont ,jdbcType=VARCHAR}
+				, RVSE_DT = NOW()
+				, ATCH_FILE_ID = #{atchFileId ,jdbcType=VARCHAR}
+				, STA_DATE = #{staDate ,jdbcType=VARCHAR}
+				, END_DATE  = #{endDate ,jdbcType=VARCHAR}
+				, NOTI_YN  = #{notiYn ,jdbcType=VARCHAR}
+				, HP = #{hp ,jdbcType=VARCHAR}
+				, EMAIL = #{email ,jdbcType=VARCHAR}
+			WHERE  SEQ = #{seq}  
+		]]>
+	</update>
+	
+	<update id="deleteContents" parameterType="noticeVO">
+		/* Board.deleteContents */
+		<![CDATA[
+			UPDATE T_NOTICE
+		       SET
+	          	 USE_YN='N'
+			WHERE SEQ=#{seq}
+		]]>
+	</update>
+
+</mapper>

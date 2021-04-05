@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.open.BReply">
+
+	<sql id="Where">
+		<if test="searchKeyword !=null and searchKeyword !=''">
+			<if test="searchCondition !=null and searchCondition !='' and searchCondition ==0">
+				AND (TITLE LIKE CONCAT('%',#{searchKeyword},'%') OR CONT like CONCAT('%',#{searchKeyword},'%'))
+			</if>
+			<if test="searchCondition !=null and searchCondition !='' and searchCondition ==1">
+				AND TITLE LIKE CONCAT('%',#{searchKeyword},'%')
+			</if>
+			<if test="searchCondition !=null and searchCondition !='' and searchCondition ==2">
+				AND CONT LIKE CONCAT('%',#{searchKeyword},'%')
+			</if>
+	 	</if>
+	</sql>
+	
+	<select id="selectContents" parameterType="breplyVO" resultType="breplyVO">
+		/* Board.selectContents */
+		<![CDATA[
+			 SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, ATCH_FILE_ID atchFileId
+				, F_USER_NM(RGST_ID) name
+				, HP hp
+				, EMAIL email
+				, IS_PRIVATE isPrivate
+		     FROM  T_BREPLY TB
+			 WHERE  USE_YN='Y'	
+				 AND SEQ = #{seq}
+		]]>
+	</select>
+	<select id="selectReplyContents" parameterType="breplyVO" resultType="breplyVO">
+		/* reply.selectContents */
+		<![CDATA[
+			 SELECT  
+				  BREPLY_SEQ breplySeq
+				, SUB_SEQ subSeq
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, ATCH_FILE_ID atchFileId
+				, F_USER_NM(RGST_ID) name
+				, HP hp
+				, EMAIL email
+		     FROM  T_BREPLY_REPLY
+			 WHERE  USE_YN='Y'	
+				 AND SUB_SEQ = #{seq}
+		]]>
+	</select>
+	<select id="selectPrevContents" parameterType="breplyVO" resultType="breplyVO">
+		/* Board.selectContents */
+		<![CDATA[
+			 SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, ATCH_FILE_ID atchFileId
+				, F_USER_NM(RGST_ID) name
+				, HP hp
+				, EMAIL email
+				, IS_PRIVATE isPrivate
+		     FROM  T_BREPLY TB
+			 WHERE  USE_YN='Y'	
+				 AND SEQ = (SELECT MAX(SEQ) FROM T_BREPLY WHERE SEQ < #{seq} AND USE_YN='Y')
+		]]>
+	</select>
+	<select id="selectNextContents" parameterType="breplyVO" resultType="breplyVO">
+		/* Board.selectContents */
+		<![CDATA[
+			 SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, ATCH_FILE_ID atchFileId
+				, F_USER_NM(RGST_ID) name
+				, HP hp
+				, EMAIL email
+				, IS_PRIVATE isPrivate
+		     FROM  T_BREPLY TB
+			 WHERE  USE_YN='Y'	
+				 AND SEQ = (SELECT MIN(SEQ) FROM T_BREPLY WHERE SEQ > #{seq} AND USE_YN='Y')
+		]]>
+	</select>
+	
+	
+	<select id="selectList" parameterType="cmmnDefaultVO" resultType="breplyVO">
+		/* Board.selectList */
+		<![CDATA[
+      	     SELECT  
+				  SEQ seq
+				, TITLE title
+				, CONT cont
+				, DATE_FORMAT(RGST_DT,'%Y.%m.%d') rgstDt
+				, RGST_ID rgstId
+				, F_USER_NM(RGST_ID) name
+				, ATCH_FILE_ID atchFileId
+				, HP hp
+				, EMAIL email
+				, IS_PRIVATE isPrivate
+				,CASE
+					WHEN DATE(RGST_DT) = CURDATE()
+					THEN 'Y'
+					ELSE 'N'
+				END newItem
+		     FROM T_BREPLY TB
+			 WHERE USE_YN='Y'	
+	      ]]>
+		     <include refid="Where"/>	 
+	     <![CDATA[ 
+	    		ORDER BY SEQ DESC
+				LIMIT  #{firstIndex} , #{recordCountPerPage}
+		]]>
+	</select>	
+
+
+	<select id="selectCount" parameterType="cmmnDefaultVO" resultType="int">
+		/* Board.selectCount */
+		<![CDATA[
+			SELECT 
+				COUNT(SEQ) cnt 
+			FROM T_BREPLY
+			WHERE USE_YN='Y' 
+		]]>
+			 <include refid="Where"/>
+	</select>
+	
+	<insert id="insertContents" parameterType="breplyVO">
+		/* Board.insertContents */
+		<![CDATA[
+			INSERT INTO T_BREPLY(
+           	  	  SEQ 
+				, TITLE 
+				, CONT
+				, RGST_ID 
+				, ATCH_FILE_ID 
+				, HP
+				, EMAIL
+				, IS_PRIVATE
+			)
+			VALUES (
+				 (SELECT IFNULL(MAX(TB.SEQ)+1,1) FROM T_BREPLY TB)
+				,#{title ,jdbcType=VARCHAR}
+				,#{cont ,jdbcType=VARCHAR}
+				,#{loginSeq ,jdbcType=VARCHAR}
+				,#{atchFileId ,jdbcType=VARCHAR}
+				,#{hp ,jdbcType=VARCHAR}
+				,#{email ,jdbcType=VARCHAR}
+				,#{isPrivate ,jdbcType=VARCHAR}
+			)
+		]]>
+	</insert>
+	<insert id="insertReplyContents" parameterType="breplyVO">
+		/* reply.insertContents */
+		<![CDATA[
+			INSERT INTO T_BREPLY_REPLY(
+           	  	  SUB_SEQ 
+				, CONT
+				, RGST_ID 
+				, ATCH_FILE_ID 
+				, HP
+				, EMAIL
+			)
+			VALUES (
+				 #{seq ,jdbcType=VARCHAR}
+				,#{cont ,jdbcType=VARCHAR}
+				,#{loginSeq ,jdbcType=VARCHAR}
+				,#{atchFileId ,jdbcType=VARCHAR}
+				,#{hp ,jdbcType=VARCHAR}
+				,#{email ,jdbcType=VARCHAR}
+			)
+		]]>
+	</insert>
+	
+	<update id="updateContents" parameterType="breplyVO">
+		/* Board.updateContents */
+		<![CDATA[
+			UPDATE T_BREPLY     
+			 SET 
+				  TITLE = #{title ,jdbcType=VARCHAR} 
+				, CONT = #{cont ,jdbcType=VARCHAR}
+				, RVSE_DT = NOW()
+				, ATCH_FILE_ID = #{atchFileId ,jdbcType=VARCHAR}
+				, HP = #{hp ,jdbcType=VARCHAR}
+				, EMAIL = #{email ,jdbcType=VARCHAR}
+				, IS_PRIVATE = #{isPrivate ,jdbcType=VARCHAR}
+			WHERE  SEQ = #{seq}  
+		]]>
+	</update>
+	<update id="updateReplyContents" parameterType="breplyVO">
+		/* reply.updateContents */
+		<![CDATA[
+			UPDATE T_BREPLY_REPLY     
+			 SET 
+				 CONT = #{cont ,jdbcType=VARCHAR}
+				, RVSE_DT = NOW()
+				, ATCH_FILE_ID = #{atchFileId ,jdbcType=VARCHAR}
+				, HP = #{hp ,jdbcType=VARCHAR}
+				, EMAIL = #{email ,jdbcType=VARCHAR}
+			WHERE  BREPLY_SEQ = #{breplySeq}  
+		]]>
+	</update>
+	
+	<update id="deleteContents" parameterType="breplyVO">
+		/* Board.deleteContents */
+		<![CDATA[
+			UPDATE T_BREPLY
+		       SET
+	          	 USE_YN='N'
+			WHERE SEQ=#{seq}
+		]]>
+	</update>
+	<update id="deleteReplyContents" parameterType="breplyVO">
+		/* Board.deleteContents */
+		<![CDATA[
+			UPDATE T_BREPLY_REPLY
+		       SET
+	          	 USE_YN='N'
+			WHERE BREPLY_SEQ = #{breplySeq} 
+		]]>
+	</update>
+
+</mapper>
